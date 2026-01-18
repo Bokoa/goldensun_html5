@@ -10,12 +10,13 @@
         },
         "to": {
             "pos": {"x": "targets", "y": "targets"},
-            "delta": {"x": -10, "y": -15},
-            "range_delta": {"x": 35}
+            "delta": {"x": -10, "y": -5},
+            "range_delta": {"x": 35, "y": 10}
         },
         "count": 17,
         "duration": 180,
         "interval_time": 40,
+        "send_to_back": true,
         "trail_factor": 0.05,
         "trail": true,
         "trail_count": 4,
@@ -149,6 +150,7 @@
                 "blue": 240,
                 "lifespan": 500,
                 "ay": 0.02,
+                "bringToTop": true,
                 "vx": {
                     "initial": {"min": -0.95, "max": 0.95}
                 },
@@ -159,24 +161,27 @@
         },
         "zones": {
             "circle_zone": {
-                "type": "circle",
-                "radius": 33
+                "type": "ellipse",
+                "width": 80,
+                "height": 20
             }
         },
         "emitters": [{
             "x": "targets",
             "y": "targets",
+            "shift_x": -40,
             "shift_y": -13,
             "position": "between",
             "render_type": "pixel",
             "show_trails": true,
             "trails_clear_factor": 0.25,
-            "pixel_size": 5,
+            "pixel_size": 8,
             "pixel_reducing_factor": 0.2,
             "pixel_is_rect": false,
             "particles_display_blend_mode": "screen",
             "render_white_core": true,
-            "core_custom_color": "rgba(255,255,255,0.95)",
+            "bring_to_top": true,
+            "core_custom_color": "rgba(255,255,255,1)",
             "total": 25,
             "repeat": 5,
             "frequency": 100,

@@ -342,6 +342,8 @@ export class BattleAnimation {
         render_position: battle_positions;
         ignore_if_dodge?: boolean;
         ignore_if_no_effect?: boolean;
+        bring_to_top?: boolean;
+        send_to_back?: boolean;
         trail: boolean;
         trail_factor: number;
         trail_count: number;
@@ -1446,7 +1448,7 @@ export class BattleAnimation {
             const pos_range_delta_from = lighting_seq.from.range_delta ?? {x: 0, y: 0};
             pos_range_delta_from.x = pos_range_delta_from.x ?? 0;
             pos_range_delta_from.y = pos_range_delta_from.y ?? 0;
-            const pos_range_delta_to = lighting_seq.from.range_delta ?? {x: 0, y: 0};
+            const pos_range_delta_to = lighting_seq.to.range_delta ?? {x: 0, y: 0};
             pos_range_delta_to.x = pos_range_delta_to.x ?? 0;
             pos_range_delta_to.y = pos_range_delta_to.y ?? 0;
             const thickness_base_value = lighting_seq.thickness?.base_value ?? 1;
@@ -1473,28 +1475,34 @@ export class BattleAnimation {
                     if (interval_time > 30) {
                         await promised_wait(this.game, interval_time);
                     }
-                    const calcualted_from = {
+                    const calculated_from = {
                         x: from.x + _.random(-pos_range_delta_from.x, pos_range_delta_from.x, true),
                         y: from.y + _.random(-pos_range_delta_from.y, pos_range_delta_from.y, true),
                     };
-                    const calcualted_to = {
-                        x: to.x + _.random(-pos_range_delta_to.y, pos_range_delta_to.x, true),
-                        y: to.y + _.random(-pos_range_delta_to.y, pos_range_delta_to.x, true),
+                    const calculated_to = {
+                        x: to.x + _.random(-pos_range_delta_to.x, pos_range_delta_to.x, true),
+                        y: to.y + _.random(-pos_range_delta_to.y, pos_range_delta_to.y, true),
                     };
                     const thickness =
                         thickness_base_value + _.random(-thickness_range_delta, thickness_range_delta, true);
                     const cast_angle = Math.atan2(
-                        calcualted_to.y - calcualted_from.y,
-                        calcualted_to.x - calcualted_from.x
+                        calculated_to.y - calculated_from.y,
+                        calculated_to.x - calculated_from.x
                     );
                     const cast_angle_sin = Math.sin(cast_angle);
                     const cast_angle_cos = Math.cos(cast_angle);
-                    const dist = get_distance(calcualted_from.x, calcualted_to.x, calcualted_from.y, calcualted_to.y);
+                    const dist = get_distance(calculated_from.x, calculated_to.x, calculated_from.y, calculated_to.y);
                     const data_size = dist | 0;
 
                     const group_pos = lighting_seq.render_position ?? battle_positions.BETWEEN;
                     const group = this.ability_sprites_groups[group_pos];
                     const img = this.game.add.image(0, 0, undefined, undefined, group);
+                    if (lighting_seq.bring_to_top) {
+                        group.bringToTop(img);
+                    }
+                    if (lighting_seq.send_to_back) {
+                        group.sendToBack(img);
+                    }
                     const bmp = this.game.add.bitmapData(numbers.GAME_WIDTH, numbers.GAME_HEIGHT);
                     bmp.smoothed = false;
                     bmp.add(img);
@@ -1540,19 +1548,52 @@ export class BattleAnimation {
                         }
                     }
 
+                    let prev_x,
+                        prev_y = null;
                     const y_data = cumsum(random_normal(data_size, lighting_seq.roughness ?? 0.01, 0));
                     for (let k = 0; k < data_size; ++k) {
-                        const x = calcualted_from.x + (dist * k) / data_size;
-                        const y = calcualted_from.y + dist * y_data[k];
+                        const x = calculated_from.x + (dist * k) / data_size;
+                        const y = calculated_from.y + dist * y_data[k];
                         const rot_x =
-                            (x - calcualted_from.x) * cast_angle_cos -
-                            (y - calcualted_from.y) * cast_angle_sin +
-                            calcualted_from.x;
+                            (x - calculated_from.x) * cast_angle_cos -
+                            (y - calculated_from.y) * cast_angle_sin +
+                            calculated_from.x;
                         const rot_y =
-                            (x - calcualted_from.x) * cast_angle_sin +
-                            (y - calcualted_from.y) * cast_angle_cos +
-                            calcualted_from.y;
-                        bmp.setPixel32(rot_x | 0, rot_y | 0, 255, 255, 255, 255, false);
+                            (x - calculated_from.x) * cast_angle_sin +
+                            (y - calculated_from.y) * cast_angle_cos +
+                            calculated_from.y;
+                        const px_x = rot_x | 0;
+                        const px_y = rot_y | 0;
+                        bmp.setPixel32(px_x, px_y, 255, 255, 255, 255, false);
+
+                        if (k) {
+                            const adjacent = Math.max(Math.abs(px_x - prev_x), Math.abs(px_y - prev_y)) <= 1;
+                            if (!adjacent) {
+                                const dx = Math.abs(px_x - prev_x);
+                                const dy = Math.abs(px_y - prev_y);
+                                const sx = prev_x < px_x ? 1 : -1;
+                                const sy = prev_y < px_y ? 1 : -1;
+                                let err = dx - dy;
+                                while (true) {
+                                    bmp.setPixel32(prev_x, prev_y, 255, 255, 255, 255, false);
+                                    if (prev_x === px_x && prev_y === px_y) {
+                                        break;
+                                    }
+                                    const e2 = err * 2;
+                                    if (e2 > -dy) {
+                                        err -= dy;
+                                        prev_x += sx;
+                                    }
+                                    if (e2 < dx) {
+                                        err += dx;
+                                        prev_y += sy;
+                                    }
+                                }
+                            }
+                        }
+
+                        prev_x = px_x;
+                        prev_y = px_y;
                     }
 
                     bmp.context.putImageData(bmp.imageData, 0, 0);

@@ -114,6 +114,8 @@ export type Emitter = {
     transforms?: string[];
     zone_key?: string;
     random_in_zone?: boolean;
+    bring_to_top?: boolean;
+    send_to_back?: boolean;
     spacing?: number | number[];
     force?: {x: number; y: number};
     radiate?: {
@@ -396,6 +398,11 @@ export class ParticlesWrapper {
                     displays.forEach(display => {
                         if (!display) return;
                         inner_groups[emitter_info.position].addChild(display);
+                        if (emitter_info.bring_to_top) {
+                            inner_groups[emitter_info.position].bringToTop(display);
+                        } else if (emitter_info.send_to_back) {
+                            inner_groups[emitter_info.position].sendToBack(display);
+                        }
                     });
                 }
                 if (emitter_info.gravity_well) {
